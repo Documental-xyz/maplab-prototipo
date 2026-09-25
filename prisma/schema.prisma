@@ -1,0 +1,76 @@
+// MapLab Studio — open-source geospatial platform
+// Compatible with Mapbox Studio / MapLibre Style Specification v8
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Project {
+  id          String       @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  styles      Style[]
+  datasets   Dataset[]
+  tileSources TileSource[]
+}
+
+// A MapLibre/Mapbox Style Specification document (v8).
+// The full style JSON is stored in `spec` as JSON text because
+// SQLite primitives cannot hold lists/nested objects.
+model Style {
+  id        String   @id @default(cuid())
+  name      String
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  spec      String
+  version   Int      @default(8)
+  centerLng Float?
+  centerLat Float?
+  zoom      Float?
+  bearing   Float?   @default(0)
+  pitch     Float?   @default(0)
+  isPublished Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// A user-supplied dataset (GeoJSON inline or PMTiles URL).
+model Dataset {
+  id           String   @id @default(cuid())
+  name         String
+  projectId    String
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  type         String   @default("geojson") // geojson | pmtiles | csv | vector
+  format       String   @default("geojson") // geojson | pmtiles | mvt
+  // Inline GeoJSON (when type=geojson) or remote URL / file path.
+  data         String
+  fileSize     Int      @default(0)
+  featureCount Int      @default(0)
+  geometryType String?  // Point | LineString | Polygon | Multi* | Mixed
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// A tile source referenced by styles (PMTiles, raster, vector).
+model TileSource {
+  id          String   @id @default(cuid())
+  name        String
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  type        String   // pmtiles | raster | vector | raster-dem
+  url         String
+  sourceLayer  String?
+  tileSize    Int      @default(256)
+  attribution String?
+  minzoom     Int      @default(0)
+  maxzoom     Int      @default(14)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
